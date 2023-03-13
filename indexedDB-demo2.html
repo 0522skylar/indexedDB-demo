@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>操作一张表</title>
+    <style>
+        .list {
+            margin-top: 40px;
+        }
+
+        .box {
+            border: 1px solid #ccc;
+            padding: 50px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="list">
+        <div class="student box">
+            <p>student表</p>
+            <div>id: <input class="id" /></div>
+            <br />
+
+            <div>str: <input class="str" /></div>
+            <br />
+            <button class="add">新增数据</button>
+            <button class="search">查找数据</button>
+            <button class="romove">删除数据</button>
+            <button class="update">更新数据</button>
+            <button class="delete">删除表</button>
+            <br />
+        </div>
+    </div>
+
+    <br />
+
+    <button id="deleteBase">删除库</button>
+
+    <script type="module">
+        import IndexedDB from './indexedDB.js'
+        // 不同数据库之间不需要open和关闭连接,也能够实现增删改查
+        const studentbaseTable = {
+            baseName: 'student', // 数据库名称
+            sheetName: 'studentTable', // 数据表名称
+            keyName: 'id', // 主键
+            indexArr: [{ name: 'str' }] // 索引
+        }
+
+        const student = new IndexedDB(studentbaseTable)
+
+        document.querySelector("#list .student .add").onclick = () => {
+            const id = document.querySelector("#list .student .id").value
+            const str = document.querySelector("#list .student .str").value
+            if(id !== "" && str !== "") {
+                student.isReady().then(() => {
+                    return student.add({
+                        id,
+                        str
+                    })
+                }).then(() => {
+                    student.destroy()
+                }).catch(e=> {
+                    console.error(e)
+                })
+            } else {
+                confirm("主键和str不能为空")
+            }
+        }
+
+        document.querySelector("#list .student .search").onclick = () => {
+            const id = document.querySelector("#list .student .id").value
+            if(id !== "") {
+                student.isReady().then(() => {
+                    return student.read(id)
+                }).then(res => {
+                    console.log('读取的数据为', res)
+                    confirm('str: '+ res.str)
+                }).then(() => {
+                    student.destroy()
+                }).catch(e=> {
+                    console.error(11, e)
+                }).finally(() => {
+                    console.log(22222)
+                })
+           
+            } else {
+                confirm("根据主键查找,主键不能为空")
+            }
+        }
+
+        document.querySelector("#list .student .romove").onclick = () => {
+            const id = document.querySelector("#list .student .id").value
+            if(id !== "") {
+                student.isReady().then(() => {
+                    return student.remove(id)
+                }).then(res => {
+                    confirm('删除成功')
+                    student.destroy()
+                }).catch(e => {
+                    confirm('删除失败')
+                })
+           
+            } else {
+                confirm("根据主键删除,主键不能为空")
+            }
+        }
+        
+        document.querySelector("#list .student .update").onclick = () => {
+            const id = document.querySelector("#list .student .id").value
+            const str = document.querySelector("#list .student .str").value
+            if(id !== "" && str !== "") {
+                student.isReady().then(() => {
+                    return student.update({
+                        id,
+                        str
+                    })
+                }).then((res) => {
+                    confirm('更新成功')
+                    student.destroy()  
+                })
+            } else {
+                confirm("主键和str不能为空")
+            }
+        }
+
+        document.querySelector("#list .student .delete").onclick = () => {
+            student.isReady().then(() => {
+                return student.destroy()
+            }).then(() => {
+                return student.deleSheet(student.version + 1)
+            }).then(() => {
+                confirm('删除成功')
+            }).catch((e) => {
+                confirm('删除表失败')
+                console.error(e)
+            })
+            
+        }
+
+
+        document.querySelector("#deleteBase").onclick = () => {
+            student.isReady().then(() => {
+                student.deleDataBase('student').then(() => {
+                    confirm('删除库成功')
+
+                }).catch((e) => {
+                    confirm('删除库失败')
+                    console.error(e)
+                })
+            })
+        }
+
+    </script>
+</body>
+
+</html>

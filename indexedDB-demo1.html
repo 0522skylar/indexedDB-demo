@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>同一个页面操作同一个数据库中的不同表</title>
+    <style>
+        .list {
+            margin-top: 40px;
+        }
+
+        .box {
+            border: 1px solid #ccc;
+            padding: 50px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="list">
+        <div class="student box">
+            <p>student表</p>
+            <div>id: <input class="id" /></div>
+            <br />
+
+            <div>str: <input class="str" /></div>
+            <br />
+            <button class="add">新增数据</button>
+            <button class="search">查找数据</button>
+            <button class="romove">删除数据</button>
+            <button class="update">更新数据</button>
+            <button class="delete">删除表</button>
+            <br />
+        </div>
+        <div class="teacher box">
+            <p>teacher表</p>
+            <div>id: <input class="id" /></div>
+            <br />
+
+            <div>str: <input class="str" /></div>
+            <br />
+            <button class="add">新增数据</button>
+            <button class="search">查找数据</button>
+            <button class="romove">删除数据</button>
+            <button class="update">更新数据</button>
+            <button class="delete">删除表</button>
+            <br />
+        </div>
+    </div>
+
+    <br />
+
+    <button id="deleteBase">删除库</button>
+
+    <script type="module">
+        import IndexedDB from './indexedDB.js'
+        // 不同数据库之间不需要open和关闭连接,也能够实现增删改查
+        // 同一个数据库操作不同表格，需要等待上一个表操作close才能再次open下一个表，只有open之后才可以进行表格内容的增删改查
+        // 注意数据库的版本version，添加操作和删除表操作，会导致version发生变化（每次操作数据表，都需要在open事触发版本更新）
+        const studentbaseTable = {
+            baseName: 'school', // 数据库名称
+            sheetName: 'studentTable', // 数据表名称
+            keyName: 'id', // 主键
+            indexArr: [{ name: 'str' }] // 索引
+        }
+        const teacherbaseTable = {
+            baseName: 'school', // 数据库名称
+            sheetName: 'teacherTable', // 数据表名称
+            keyName: 'id', // 主键
+            indexArr: [{ name: 'str' }], // 索引
+        }
+        let teacher = null
+        let maxVersion = null
+
+        const student = new IndexedDB(studentbaseTable)
+        student.isReady().then(() => {
+            student.destroy()
+            teacher = new IndexedDB(teacherbaseTable)
+        }).then(() => {
+            return teacher.isReady()
+        }).then(() => {
+            student.version  = teacher.version
+            maxVersion = teacher.version
+            console.log(maxVersion)
+            teacher.destroy()
+        })
+ 
+
+        
+
+        document.querySelector("#list .student .add").onclick = () => {
+            const id = document.querySelector("#list .student .id").value
+            const str = document.querySelector("#list .student .str").value
+            if(id !== "" && str !== "") {
+                // teacher.destroy()
+                student.isReady().then(() => {
+                    return student.add({
+                        id,
+                        str
+                    })
+                    // 新增可能会改变版本号
+                }).then(() => {
+                    maxVersion = student.version
+
+                    confirm('新增数据成功, id为'+ id)
+                    student.destroy()
+                }).catch(() => {
+                    confirm('新增数据失败, id为'+ id)
+                    student.destroy()
+                })
+
+            } else {
+                confirm("主键和str不能为空")
+            }
+        }
+
+        document.querySelector("#list .student .search").onclick = () => {
+            const id = document.querySelector("#list .student .id").value
+            if(id !== "") {
+                student.open(maxVersion).then(() => {
+                    return student.read(id)
+                }).then(res => {
+                    console.log('读取的数据为', res)
+                    confirm('str: '+ res.str)
+                    student.destroy()
+                })
+           
+            } else {
+                confirm("根据主键查找,主键不能为空")
+            }
+        }
+
+        document.querySelector("#list .student .romove").onclick = () => {
+            const id = document.querySelector("#list .student .id").value
+            if(id !== "") {
+                student.open(maxVersion).then(() => {
+                    return student.remove(id)
+                }).then(res => {
+                    confirm('student删除成功')
+                    student.destroy()
+                }).catch(e => {
+                    confirm('student删除失败')
+                })
+           
+            } else {
+                confirm("根据主键删除,主键不能为空")
+            }
+        }
+
+        document.querySelector("#list .student .update").onclick = () => {
+            const id = document.querySelector("#list .student .id").value
+            const str = document.querySelector("#list .student .str").value
+            if(id !== "" && str !== "") {
+                // teacher.destroy();
+                student.open(maxVersion).then(() => {
+                    return student.update({
+                        id,
+                        str
+                    })
+                }).then(() => {
+                    student.destroy()
+                    confirm('更新成功')
+                }).catch(() => {
+                    confirm('更新失败')
+                })
+            } else {
+                confirm("主键和str不能为空")
+            }
+        }
+
+        // 进行增删改查之后删除操作很慢进行
+        document.querySelector("#list .student .delete").onclick = () => {
+            student.open(maxVersion).then(() => {
+                return student.destroy()
+            }).then(() => {
+                return student.deleSheet(maxVersion+1)
+            }).then(() => {
+                maxVersion = student.version
+                // student.destroy()
+                confirm('student表删除成功')
+            }).catch((e) => {
+                confirm('删除表失败')
+                console.error(e)
+            })
+        }
+
+        document.querySelector("#list .teacher .add").onclick = () => {
+            const id = document.querySelector("#list .teacher .id").value
+            const str = document.querySelector("#list .teacher .str").value
+            if(id !== "" && str !== "") {
+                console.log(maxVersion)
+                teacher.isReady().then(() => {
+                    return teacher.add({
+                        id,
+                        str
+                    })
+                    // 新增可能会改变版本号
+                }).then(() => {
+                    maxVersion = teacher.version
+                    confirm('新增数据成功, id为'+ id)
+                    teacher.destroy()
+                }).catch(() => {
+                    confirm('新增数据失败, id为'+ id)
+                    teacher.destroy()
+                })
+            } else {
+                confirm("主键和str不能为空")
+            }
+        }
+
+        document.querySelector("#list .teacher .search").onclick = () => {
+            const id = document.querySelector("#list .teacher .id").value
+            if(id !== "") {
+                // student.destroy();
+                teacher.open(maxVersion).then(() => {
+                    return teacher.read(id)
+                    // 新增可能会改变版本号
+                    maxVersion = teacher.version
+                }).then(res => {
+                    console.log('读取的数据为', res)
+                    confirm('str: '+ res.str)
+                }).then(() => {
+                    teacher.destroy()
+                })
+           
+            } else {
+                confirm("根据主键查找,主键不能为空")
+            }
+        }
+
+        document.querySelector("#list .teacher .romove").onclick = () => {
+            const id = document.querySelector("#list .teacher .id").value
+            if(id !== "") {
+
+                teacher.open(maxVersion).then(() => {
+                    return teacher.remove(id)
+                }).then(res => {
+                    confirm('teacher删除成功')
+                    teacher.destroy()
+                }).catch(e => {
+                    confirm('teacher删除失败')
+                })
+           
+            } else {
+                confirm("根据主键删除,主键不能为空")
+            }
+        }
+
+
+        document.querySelector("#list .teacher .update").onclick = () => {
+            const id = document.querySelector("#list .teacher .id").value
+            const str = document.querySelector("#list .teacher .str").value
+            if(id !== "" && str !== "") {
+                teacher.open(maxVersion).then(() => {
+                    return teacher.update({
+                        id,
+                        str
+                    })
+                }).then(() => {
+                    teacher.destroy()
+                    confirm('更新成功')
+                }).catch(() => {
+                    confirm('更新失败')
+                })
+            } else {
+                confirm("主键和str不能为空")
+            }
+        }
+
+        document.querySelector("#list .teacher .delete").onclick = () => {
+            teacher.open(maxVersion).then(() => {
+                return teacher.destroy()
+            }).then(() => {
+                return teacher.deleSheet(maxVersion+1)
+            }).then(() => {
+                maxVersion = teacher.version
+                confirm('teacher表删除成功')
+            }).catch((e) => {
+                confirm('删除表失败')
+                console.error(e)
+            })
+        }
+
+        document.querySelector("#deleteBase").onclick = () => {
+            student.open(maxVersion).then(() => {
+                student.deleDataBase('school').then(() => {
+                    confirm('删除库成功')
+
+                }).catch((e) => {
+                    confirm('删除库失败')
+                    console.error(e)
+                })
+            })
+        }
+
+    </script>
+</body>
+
+</html>

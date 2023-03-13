@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+
+<body>
+  <div id="tableA">
+    <p>baseA, tableA</p>
+    <div>id: <input class="id" /></div>
+    <br />
+
+    <div>str: <input class="str" /></div>
+    <br />
+    <button class="add">新增数据</button>
+    <button class="search">查询数据</button>
+    <button class="delete">删除数据</button>
+    <button class="remove">删除表</button>
+  </div>
+  <div id="tableB">
+    <p>baseB, tableB</p>
+    <div>id: <input class="id" /></div>
+    <br />
+
+    <div>str: <input class="str" /></div>
+    <br />
+    <button class="add">新增数据</button>
+    <button class="search">查询数据</button>
+    <button class="delete">删除数据</button>
+    <button class="remove">删除表</button>
+  </div>
+  <script>
+    
+
+    let version = null;
+    let dataBaseA = null;
+    let dataBaseB = null;
+    
+    function openBase1() {
+      let request = window.indexedDB.open("baseA")
+      request.onerror = (event) => {
+        console.error('dataBase打开报错', event.target.error)
+      }
+      request.onsuccess = (event) => {
+        dataBaseA = event.target.result
+        version = event.target.result.version
+        console.log('dataBaseA open success')
+
+      }
+      // 新建数据表
+      request.onupgradeneeded = (event) => {
+        dataBaseA = event.target.result
+        // let objectStore = null
+        console.info('datadataBaseA建表')
+        let objectStore1 = dataBaseA.createObjectStore("tableA", {
+          keyPath: "id"
+        })
+        // 新建索引
+        objectStore1.createIndex("str", "str", {unique: false})
+      }
+    }
+
+    function openBase2() {
+      let request = window.indexedDB.open("baseB")
+      request.onerror = (event) => {
+        console.error('dataBase打开报错', event.target.error)
+      }
+      request.onsuccess = (event) => {
+        dataBaseB = event.target.result
+        version = event.target.result.version
+        console.log('dataBaseB open success')
+      }
+      // 新建数据表
+      request.onupgradeneeded = (event) => {
+        dataBaseB = event.target.result
+        // let objectStore = null
+        console.info('dataBaseb建表')
+        let objectStore1 = dataBaseB.createObjectStore("tableB", {
+          keyPath: "id"
+        })
+        // 新建索引
+        objectStore1.createIndex("str", "str", {unique: false})
+      }
+    }
+    openBase1()
+    openBase2()
+    document.querySelector("#tableA .add").onclick = () => {
+      const id = document.querySelector("#tableA .id").value
+      const str = document.querySelector("#tableA .str").value
+        request = dataBaseA.transaction("tableA", 'readwrite')
+        .objectStore("tableA")
+        .put({id, str})
+
+        request.onsuccess = () => {
+          console.info('tableA write data success')
+        }
+        request.onerror = (e) => {
+          console.error('tableA write data fail')
+        }
+    }
+    document.querySelector("#tableB .add").onclick = () => {
+      const id = document.querySelector("#tableB .id").value
+      const str = document.querySelector("#tableB .str").value
+      console.log(dataBaseB, 11111)
+        request = dataBaseB.transaction("tableB", 'readwrite')
+        .objectStore("tableB")
+        .put({id, str})
+
+        request.onsuccess = () => {
+          console.info('tableB write data success')
+        }
+        request.onerror = (e) => {
+          console.error('tableB write data fail')
+        }
+    }
+
+
+    document.querySelector("#tableA .search").onclick = () => {
+      const key = document.querySelector("#tableA .id").value
+      const objectStore = dataBaseA.transaction(['tableA']).objectStore('tableA')
+      const request = objectStore.get(key)
+      request.onerror = (e) => {
+        console.error('#tableA . read dataBase fail')
+      }
+      request.onsuccess = () => {
+        if (request.result) {
+          console.log('#tableA . search successful!!!!', request.result)
+        } else {
+          console.info('tableA not find any data')
+        }
+      }
+    }
+
+
+    document.querySelector("#tableB .search").onclick = () => {
+      const key = document.querySelector("#tableB .id").value
+      const objectStore = dataBaseB.transaction(['tableB']).objectStore('tableB')
+      const request = objectStore.get(key)
+      request.onerror = (e) => {
+        console.error('#tableB . read dataBase fail')
+      }
+      request.onsuccess = () => {
+        if (request.result) {
+          console.log('#tableB . search successful!!!!', request.result)
+        } else {
+          console.info('tableB not find any data')
+        }
+      }
+    }
+
+
+    document.querySelector("#tableA .delete").onclick = () => {
+      const key = document.querySelector("#tableA .id").value
+      request = dataBaseA.transaction(['tableA'], 'readwrite')
+      .objectStore('tableA')
+      .delete(key)
+      request.onsuccess = (e) => {
+        console.info('tableA dataBase数据删除成功', e)
+      }
+      request.onerror = (e) => {
+        console.error('tableA dataBase数据删除事务失败')
+      }
+    }
+
+    document.querySelector("#tableB .delete").onclick = () => {
+
+      const key = document.querySelector("#tableB .id").value
+      request = dataBaseB.transaction(['tableB'], 'readwrite')
+      .objectStore('tableB')
+      .delete(key)
+      request.onsuccess = (e) => {
+        console.info('tableB dataBase数据删除成功', e)
+      }
+      request.onerror = (e) => {
+        console.error('tableB dataBase数据删除事务失败')
+      }
+    }
+
+    document.querySelector("#tableA .remove").onclick = () => {
+      dataBaseA.close();
+      version++
+      console.log(version)
+      request = window.indexedDB.open('baseA', version);
+      request.onerror = (event) => {
+        console.error(event.target.error)
+      };
+      request.onsuccess = (event) => {
+        version = event.target.result.version
+        console.log('delet success')
+      }
+      request.onupgradeneeded = (event) => {
+        dataBaseA = event.target.result;
+        version = dataBaseA.version;
+        dataBaseA.deleteObjectStore('tableA');
+        console.log(event.target, 'tableA delete success')
+      };
+    }
+    document.querySelector("#tableB .remove").onclick = () => {
+      dataBaseB.close();
+      version++
+      console.log(version)
+      request = window.indexedDB.open('baseB', version);
+      request.onerror = (event) => {
+        console.error(event.target.error)
+      };
+      request.onsuccess = (event) => {
+        version = event.target.result.version
+        console.log('delet success')
+      }
+      request.onupgradeneeded = (event) => {
+        dataBaseB = event.target.result;
+        version = dataBaseB.version;
+        dataBaseB.deleteObjectStore('tableB');
+        console.log(event.target, ' tableB delete success')
+      };
+    }
+  </script>
+</body>
+
+</html>
