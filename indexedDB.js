@@ -21,30 +21,12 @@ export default class IndexedDB {
     this.keyName = keyName
     this.indexArr = indexArr
     this.version = version
-    
-    // this.handleSheet()
   }
-  // 适用于同一个页面操作多个表格
-  open(version) {
-    const request = window.indexedDB.open(this.dataBaseName, version)
+
+  isReady(version) {
     return new Promise((resolve, reject) => {
-      request.onerror = (event) => {
-        console.error('dataBase打开报错', event.target.error)
-        reject(event.target.error)
-      }
-      request.onsuccess = (event) => {
-        this.dataBase = event.target.result
-        this.version = event.target.result.version
-        console.info('dataBase打开成功')
-        resolve()
-      }
-    })
-  }
-  // 适用于初始化同一个数据库第二个表格
-  isReady() {
-    // 打开数据库
-    const request = window.indexedDB.open(this.dataBaseName, this.version)
-    return new Promise((resolve, reject) => {
+      // 打开数据库
+      const request = window.indexedDB.open(this.dataBaseName, version || this.version)
       request.onerror = (event) => {
         console.error('dataBase打开报错', event.target.error)
         reject(event.target.error)
@@ -73,16 +55,15 @@ export default class IndexedDB {
         }
       }
     })
-    
+
   }
   // 写数据操作
   write(obj) {
-    // put()有则更新，无则新增
-    const request = this.dataBase.transaction(this.dataSheetName, 'readwrite')
-      .objectStore(this.dataSheetName)
-      .put(obj)
-
     return new Promise((resolve, reject) => {
+      // put()有则更新，无则新增
+      const request = this.dataBase.transaction(this.dataSheetName, 'readwrite')
+        .objectStore(this.dataSheetName)
+        .put(obj)
       request.onsuccess = () => {
         console.info('write data success')
         resolve(this)
@@ -120,7 +101,7 @@ export default class IndexedDB {
         })
       }
     })
-    
+
   }
   // 更新数据
   update(obj) {
@@ -132,15 +113,15 @@ export default class IndexedDB {
         reject(e)
       })
     })
-    
+
   }
   // 读取数据
   read(key) {
     // throw new Error('xxxxxxxxx')
     return new Promise((resolve, reject) => {
       // throw new Error('1111111')
-      if(!this.dataBase.objectStoreNames.contains(this.dataSheetName)) {
-        return
+      if (!this.dataBase.objectStoreNames.contains(this.dataSheetName)) {
+        return resolve('未建表')
       }
       const objectStore = this.dataBase.transaction([this.dataSheetName]).objectStore(this.dataSheetName)
       const request = objectStore.get(key)
@@ -150,6 +131,7 @@ export default class IndexedDB {
       }
       request.onsuccess = () => {
         if (request.result) {
+          console.log(request.result)
           resolve(request.result)
         } else {
           console.info('not find any data')
@@ -160,14 +142,14 @@ export default class IndexedDB {
   }
   // 删除数据
   remove(key) {
-    // 不管有没有这个索引,都是删除成功的回调
-    if(!this.dataBase.objectStoreNames.contains(this.dataSheetName)) {
-      return
-    }
-    const request = this.dataBase.transaction([this.dataSheetName], 'readwrite')
-      .objectStore(this.dataSheetName)
-      .delete(key)
     return new Promise((resolve, reject) => {
+      // 不管有没有这个索引,都是删除成功的回调
+      if (!this.dataBase.objectStoreNames.contains(this.dataSheetName)) {
+        return resolve("未建该表")
+      }
+      const request = this.dataBase.transaction([this.dataSheetName], 'readwrite')
+        .objectStore(this.dataSheetName)
+        .delete(key)
       request.onsuccess = (e) => {
         console.info('dataBase数据删除成功', e)
         resolve()
@@ -180,9 +162,9 @@ export default class IndexedDB {
   }
   // 删除数据库
   deleDataBase(dataBaseName) {
-    const DBDeleteRequest = window.indexedDB.deleteDatabase(dataBaseName);
-    this.dataBase.close();
     return new Promise((resolve, reject) => {
+      const DBDeleteRequest = window.indexedDB.deleteDatabase(dataBaseName);
+      this.dataBase.close();
       DBDeleteRequest.onerror = (event) => {
         console.error("Error deleting database.");
         reject(event.target.error)
@@ -198,10 +180,8 @@ export default class IndexedDB {
 
   // 删除表
   deleSheet(version) {
-    const request = window.indexedDB.open(this.dataBaseName, version);
-    console.log(version, '删除表')
-
     return new Promise((resolve, reject) => {
+      const request = window.indexedDB.open(this.dataBaseName, version);
       request.onerror = (event) => {
         // Handle errors.
         console.error(event.target.error)

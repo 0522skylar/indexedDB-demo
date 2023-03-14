@@ -57,9 +57,9 @@
 
     <script type="module">
         import IndexedDB from './indexedDB.js'
-        // 不同数据库之间不需要open和关闭连接,也能够实现增删改查
-        // 同一个数据库操作不同表格，需要等待上一个表操作close才能再次open下一个表，只有open之后才可以进行表格内容的增删改查
-        // 注意数据库的版本version，添加操作和删除表操作，会导致version发生变化（每次操作数据表，都需要在open事触发版本更新）
+        // 不同数据库之间不需要isReady和关闭连接,也能够实现增删改查
+        // 同一个数据库操作不同表格，需要等待上一个表操作close才能再次isReady下一个表，只有isReady之后才可以进行表格内容的增删改查
+        // 注意数据库的版本version，添加操作和删除表操作，会导致version发生变化（每次操作数据表，都需要在isReady事触发版本更新）
         const studentbaseTable = {
             baseName: 'school', // 数据库名称
             sheetName: 'studentTable', // 数据表名称
@@ -96,7 +96,7 @@
             const str = document.querySelector("#list .student .str").value
             if(id !== "" && str !== "") {
                 // teacher.destroy()
-                student.open(maxVersion).then(() => {
+                student.isReady(maxVersion).then(() => {
                     return student.add({
                         id,
                         str
@@ -120,12 +120,14 @@
         document.querySelector("#list .student .search").onclick = () => {
             const id = document.querySelector("#list .student .id").value
             if(id !== "") {
-                student.open(maxVersion).then(() => {
+                student.isReady(maxVersion).then(() => {
                     return student.read(id)
                 }).then(res => {
                     console.log('读取的数据为', res)
                     confirm('str: '+ res.str)
                     student.destroy()
+                }).catch(err => {
+                    console.log(err)
                 })
            
             } else {
@@ -136,7 +138,7 @@
         document.querySelector("#list .student .romove").onclick = () => {
             const id = document.querySelector("#list .student .id").value
             if(id !== "") {
-                student.open(maxVersion).then(() => {
+                student.isReady(maxVersion).then(() => {
                     return student.remove(id)
                 }).then(res => {
                     confirm('student删除成功')
@@ -155,7 +157,7 @@
             const str = document.querySelector("#list .student .str").value
             if(id !== "" && str !== "") {
                 // teacher.destroy();
-                student.open(maxVersion).then(() => {
+                student.isReady(maxVersion).then(() => {
                     return student.update({
                         id,
                         str
@@ -173,7 +175,7 @@
 
         // 进行增删改查之后删除操作很慢进行
         document.querySelector("#list .student .delete").onclick = () => {
-            student.open(maxVersion).then(() => {
+            student.isReady(maxVersion).then(() => {
                 return student.destroy()
             }).then(() => {
                 return student.deleSheet(maxVersion+1)
@@ -192,7 +194,7 @@
             const str = document.querySelector("#list .teacher .str").value
             if(id !== "" && str !== "") {
                 console.log(maxVersion)
-                teacher.open(maxVersion).then(() => {
+                teacher.isReady(maxVersion).then(() => {
                     return teacher.add({
                         id,
                         str
@@ -215,7 +217,7 @@
             const id = document.querySelector("#list .teacher .id").value
             if(id !== "") {
                 // student.destroy();
-                teacher.open(maxVersion).then(() => {
+                teacher.isReady(maxVersion).then(() => {
                     return teacher.read(id)
                     // 新增可能会改变版本号
                     maxVersion = teacher.version
@@ -235,7 +237,7 @@
             const id = document.querySelector("#list .teacher .id").value
             if(id !== "") {
 
-                teacher.open(maxVersion).then(() => {
+                teacher.isReady(maxVersion).then(() => {
                     return teacher.remove(id)
                 }).then(res => {
                     confirm('teacher删除成功')
@@ -254,7 +256,7 @@
             const id = document.querySelector("#list .teacher .id").value
             const str = document.querySelector("#list .teacher .str").value
             if(id !== "" && str !== "") {
-                teacher.open(maxVersion).then(() => {
+                teacher.isReady(maxVersion).then(() => {
                     return teacher.update({
                         id,
                         str
@@ -271,7 +273,7 @@
         }
 
         document.querySelector("#list .teacher .delete").onclick = () => {
-            teacher.open(maxVersion).then(() => {
+            teacher.isReady(maxVersion).then(() => {
                 return teacher.destroy()
             }).then(() => {
                 return teacher.deleSheet(maxVersion+1)
@@ -285,7 +287,7 @@
         }
 
         document.querySelector("#deleteBase").onclick = () => {
-            student.open(maxVersion).then(() => {
+            student.isReady(maxVersion).then(() => {
                 student.deleDataBase('school').then(() => {
                     confirm('删除库成功')
 
