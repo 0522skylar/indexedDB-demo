@@ -96,7 +96,7 @@
             const str = document.querySelector("#list .student .str").value
             if(id !== "" && str !== "") {
                 // teacher.destroy()
-                student.isReady().then(() => {
+                student.open(maxVersion).then(() => {
                     return student.add({
                         id,
                         str
@@ -192,7 +192,7 @@
             const str = document.querySelector("#list .teacher .str").value
             if(id !== "" && str !== "") {
                 console.log(maxVersion)
-                teacher.isReady().then(() => {
+                teacher.open(maxVersion).then(() => {
                     return teacher.add({
                         id,
                         str
